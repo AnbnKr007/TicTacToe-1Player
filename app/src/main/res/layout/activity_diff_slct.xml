@@ -39,10 +39,11 @@
         style="@style/Widget.AppCompat.SeekBar.Discrete"
         android:layout_width="262dp"
         android:layout_height="39dp"
-        android:layout_marginTop="160dp"
+        android:layout_marginTop="92dp"
         android:max="2"
         android:progress="0"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
@@ -71,4 +72,38 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.859"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/imageView10"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_marginStart="48dp"
+        android:layout_marginTop="88dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/diffLabel"
+        tools:srcCompat="@drawable/x" />
+
+    <ImageView
+        android:id="@+id/imageView11"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_marginTop="88dp"
+        android:layout_marginEnd="48dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/diffLabel"
+        tools:srcCompat="@drawable/o" />
+
+    <TextView
+        android:id="@+id/textView5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:fontFamily="sans-serif-condensed"
+        android:text="I Play As:"
+        android:textSize="34sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/diffLabel" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

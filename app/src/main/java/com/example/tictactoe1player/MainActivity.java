@@ -12,28 +12,29 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.example.tictactoe1player.R;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-    // 0 = X (human), 1 = O (AI), 2 = Empty
-    int activePlayer = 0;
+    int activePlayer;
+    int humanPlayer;  // symbol chosen by human (0=X, 1=O)
+    int aiPlayer;     // opposite of humanPlayer
+
     int[] gameState = {2, 2, 2, 2, 2, 2, 2, 2, 2};
     int[][] winPos = {{0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6}};
     String winner = "";
     ImageView[] cell = new ImageView[9];
     ImageView home, redo;
     TextView endmsg;
-    int lastcell = -1;
+    int lastHumanCell = -1;
+    int lastAiCell = -1;
     int wpos;
-    int difficulty; // 0=Easy, 1=Medium, 2=Impossible
+    int difficulty;
     boolean gameOver = false;
 
-    // ─── Win / Draw checks (same as your original) ───────────────────────────
+    // ─── Win / Draw checks ────────────────────────────────────────────────────
 
     public boolean checkWin() {
         wpos = 0;
@@ -55,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    // ─── UI: show winner / draw (same as your original) ─────────────────────
+    // ─── UI: show winner / draw ───────────────────────────────────────────────
 
     public void win() {
         gameOver = true;
@@ -84,70 +85,74 @@ public class MainActivity extends AppCompatActivity {
         cell[pos].animate().alpha(1f).setDuration(200).start();
     }
 
-    // ─── Human tap (same flow as your original Tap) ──────────────────────────
+    // ─── Human tap ───────────────────────────────────────────────────────────
 
     public void Tap(View view) {
-        if (gameOver || activePlayer != 0) return;
+        if (gameOver || activePlayer != humanPlayer) return;
 
         ImageView img = (ImageView) view;
         int tappedPos = Integer.parseInt(img.getTag().toString().substring(1));
         if (gameState[tappedPos] != 2) return;
 
-        lastHumanCell = tappedPos;   // ← track human cell
-        placeSymbol(tappedPos, 0);
-        activePlayer = 1;
+        lastHumanCell = tappedPos;
+        placeSymbol(tappedPos, humanPlayer);
+        activePlayer = aiPlayer;
 
-        if (checkWin()) { winner = "X"; win(); return; }
+        if (checkWin()) {
+            winner = humanPlayer == 0 ? "X" : "O";
+            win();
+            return;
+        }
         if (checkDraw()) { draw(); return; }
 
         setBoardClickable(false);
         new Handler().postDelayed(this::aiMove, 500);
     }
 
+    // ─── AI move ─────────────────────────────────────────────────────────────
+
     private void aiMove() {
         if (gameOver) return;
 
         int chosenPos;
         switch (difficulty) {
-            case 0:  chosenPos = easyMove();  break;
+            case 0:  chosenPos = easyMove();   break;
             case 1:  chosenPos = mediumMove(); break;
             default: chosenPos = hardMove();   break;
         }
 
-        lastAiCell = chosenPos;      // ← track AI cell
-        placeSymbol(chosenPos, 1);
-        activePlayer = 0;
+        lastAiCell = chosenPos;
+        placeSymbol(chosenPos, aiPlayer);
+        activePlayer = humanPlayer;
 
-        if (checkWin()) { winner = "O"; win(); return; }
+        if (checkWin()) {
+            winner = aiPlayer == 0 ? "X" : "O";
+            win();
+            return;
+        }
         if (checkDraw()) { draw(); return; }
 
         setBoardClickable(true);
-        redo.setClickable(true);     // ← enable redo only after AI has moved
+        redo.setClickable(true);
     }
 
-    // ─── Easy: pick any random empty cell ────────────────────────────────────
+    // ─── Easy ────────────────────────────────────────────────────────────────
 
     private int easyMove() {
         List<Integer> empty = getEmptyCells();
         return empty.get(new Random().nextInt(empty.size()));
     }
 
-    // ─── Medium: win if possible, block if needed, else random ───────────────
+    // ─── Medium ──────────────────────────────────────────────────────────────
 
     private int mediumMove() {
-        // 1. Can AI win right now?
-        int win = findWinningMove(1);
+        int win = findWinningMove(aiPlayer);
         if (win != -1) return win;
-
-        // 2. Can human win next turn? Block it.
-        int block = findWinningMove(0);
+        int block = findWinningMove(humanPlayer);
         if (block != -1) return block;
-
-        // 3. Otherwise random
         return easyMove();
     }
 
-    // Finds a move that completes a line for the given player, or -1
     private int findWinningMove(int player) {
         for (int[] pos : winPos) {
             int playerCount = 0, emptyIdx = -1;
@@ -160,16 +165,16 @@ public class MainActivity extends AppCompatActivity {
         return -1;
     }
 
-    // ─── Hard: Minimax (unbeatable) ───────────────────────────────────────────
+    // ─── Hard (Minimax) ──────────────────────────────────────────────────────
 
     private int hardMove() {
         int bestScore = Integer.MIN_VALUE;
         int bestPos = -1;
         for (int i = 0; i < 9; i++) {
             if (gameState[i] == 2) {
-                gameState[i] = 1; // AI tries this cell
+                gameState[i] = aiPlayer;
                 int score = minimax(gameState, false);
-                gameState[i] = 2; // undo
+                gameState[i] = 2;
                 if (score > bestScore) {
                     bestScore = score;
                     bestPos = i;
@@ -179,23 +184,21 @@ public class MainActivity extends AppCompatActivity {
         return bestPos;
     }
 
-    // Minimax: true = AI's turn (maximising), false = human's turn (minimising)
     private int minimax(int[] board, boolean isMaximising) {
-        // Terminal state checks
         for (int[] pos : winPos) {
             if (board[pos[0]] == board[pos[1]] && board[pos[1]] == board[pos[2]] && board[pos[0]] != 2) {
-                return board[pos[0]] == 1 ? 10 : -10; // AI win=+10, human win=-10
+                return board[pos[0]] == aiPlayer ? 10 : -10;
             }
         }
         boolean full = true;
         for (int v : board) if (v == 2) { full = false; break; }
-        if (full) return 0; // draw
+        if (full) return 0;
 
         if (isMaximising) {
             int best = Integer.MIN_VALUE;
             for (int i = 0; i < 9; i++) {
                 if (board[i] == 2) {
-                    board[i] = 1;
+                    board[i] = aiPlayer;
                     best = Math.max(best, minimax(board, false));
                     board[i] = 2;
                 }
@@ -205,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
             int best = Integer.MAX_VALUE;
             for (int i = 0; i < 9; i++) {
                 if (board[i] == 2) {
-                    board[i] = 0;
+                    board[i] = humanPlayer;
                     best = Math.min(best, minimax(board, true));
                     board[i] = 2;
                 }
@@ -214,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private List<Integer> getEmptyCells() {
         List<Integer> list = new ArrayList<>();
@@ -224,38 +227,32 @@ public class MainActivity extends AppCompatActivity {
 
     private void setBoardClickable(boolean clickable) {
         for (ImageView img : cell) {
-            // Only re-enable cells that are still empty
             if (gameState[Integer.parseInt(img.getTag().toString().substring(1))] == 2) {
                 img.setClickable(clickable);
             }
         }
     }
 
-    // ─── Redo: undo last human move (same as your original) ──────────────────
-
-    int lastHumanCell = -1;
-    int lastAiCell = -1;
+    // ─── Redo ────────────────────────────────────────────────────────────────
 
     public void redofun(View view) {
-        // Undo AI's move
         if (lastAiCell != -1) {
             cell[lastAiCell].setImageResource(0);
             cell[lastAiCell].setClickable(true);
             gameState[lastAiCell] = 2;
             lastAiCell = -1;
         }
-        // Undo human's move
         if (lastHumanCell != -1) {
             cell[lastHumanCell].setImageResource(0);
             cell[lastHumanCell].setClickable(true);
             gameState[lastHumanCell] = 2;
             lastHumanCell = -1;
         }
-        activePlayer = 0;
+        activePlayer = humanPlayer;
         redo.setClickable(false);
     }
 
-    // ─── Home / reset (same as your original) ────────────────────────────────
+    // ─── Home / Reset ─────────────────────────────────────────────────────────
 
     public void homefun(View view) {
         for (ImageView img : cell) {
@@ -265,11 +262,19 @@ public class MainActivity extends AppCompatActivity {
         }
         endmsg.setVisibility(View.INVISIBLE);
         gameState = new int[]{2,2,2,2,2,2,2,2,2};
-        activePlayer = 0;
         gameOver = false;
         lastHumanCell = -1;
         lastAiCell = -1;
         redo.setClickable(false);
+
+        // If AI is X, it goes first on reset too
+        if (humanPlayer == 1) {
+            activePlayer = aiPlayer;
+            setBoardClickable(false);
+            new Handler().postDelayed(this::aiMove, 500);
+        } else {
+            activePlayer = humanPlayer;
+        }
     }
 
     // ─── onCreate ─────────────────────────────────────────────────────────────
@@ -285,7 +290,9 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        difficulty = getIntent().getIntExtra("difficulty", 0);
+        difficulty   = getIntent().getIntExtra("difficulty", 0);
+        humanPlayer  = getIntent().getIntExtra("playerSymbol", 0);
+        aiPlayer     = 1 - humanPlayer;
 
         endmsg = findViewById(R.id.textView3);
         endmsg.setVisibility(View.INVISIBLE);
@@ -303,5 +310,14 @@ public class MainActivity extends AppCompatActivity {
         home = findViewById(R.id.homeIcon);
         redo = findViewById(R.id.redoIcon);
         redo.setClickable(false);
+
+        // If player chose O, AI is X and goes first
+        if (humanPlayer == 1) {
+            activePlayer = aiPlayer;
+            setBoardClickable(false);
+            new Handler().postDelayed(this::aiMove, 500);
+        } else {
+            activePlayer = humanPlayer;
+        }
     }
 }
